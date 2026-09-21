@@ -1,6 +1,8 @@
+import jwt from "jsonwebtoken";
+import { env } from "../../config/env.js";
 import bcrypt from "bcrypt";
-import { createUser, findUserByEmail } from "./user.repository.js";
-import { User } from "./user.types.js";
+import { createUser, findUserByEmail, findUserById } from "./user.repository.js";
+import { User, LoginResponse, PublicUser } from "./user.types.js";
 
 export async function registerUser(
     name: string,
@@ -15,7 +17,7 @@ export async function registerUser(
 export async function loginUser(
     email: string,
     password: string
-): Promise<User | null> {
+): Promise<LoginResponse | null> {
     const user = await findUserByEmail(email);
 
     if(!user){
@@ -26,5 +28,25 @@ export async function loginUser(
     if(!passwordMatches){
         return null;
     }
-    return user;
+
+    const accessToken = jwt.sign(
+        {userId: user.id},
+        env.jwt.secret,
+        { expiresIn: "1h" }
+    );
+    
+    return {
+        user: {
+            id: user.id,
+            name: user.name,
+            email: user.email
+        },
+        accessToken,
+    };
+}
+
+export async function getCurrentUser(
+    userid: string
+): Promise<PublicUser | null> {
+    return await findUserById(userid);
 }

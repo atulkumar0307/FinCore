@@ -1,5 +1,5 @@
 import { pool } from "../../config/database.js";
-import { User } from "./user.types.js";
+import { User, PublicUser } from "./user.types.js";
 
 export async function createUser(
     name: string,
@@ -33,6 +33,26 @@ export async function findUserByEmail(
         WHERE email = $1
         `,
         [email]
+    );
+    if(result.rows.length === 0){
+        return null;
+    }
+    return result.rows[0];
+}
+
+export async function findUserById(
+    id: string
+): Promise<PublicUser | null>{
+    const result = await pool.query<PublicUser>(
+        `
+        SELECT
+        id,
+        name,
+        email
+        FROM users
+        WHERE id = $1
+        `,
+        [id]
     );
     if(result.rows.length === 0){
         return null;
