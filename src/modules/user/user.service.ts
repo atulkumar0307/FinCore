@@ -1,17 +1,31 @@
-import jwt from "jsonwebtoken";
-import { env } from "../../config/env.js";
 import bcrypt from "bcrypt";
 import { createUser, findUserByEmail, findUserById } from "./user.repository.js";
 import { User, LoginResponse, PublicUser } from "./user.types.js";
-
+import { AppError } from "../../shared/errors/app.error.js";
+import { createAccessToken } from "../../shared/auth/jwt.js";
 export async function registerUser(
     name: string,
     email: string,
     password: string
 ): Promise<User> {
     const hashedPassword = await bcrypt.hash(password, 12);
-    const user = await createUser(name, email, hashedPassword);
-    return user;
+    
+    try{
+        return await createUser(name, email, hashedPassword);
+    }catch( error: unknown){
+        if(
+            typeof error === "object" &&
+            error !== null &&
+            "code" in error &&
+            error.code === "23505"
+        ){
+            throw new AppError(
+                409,
+                "Email is already registered!"
+            );
+        }
+        throw error;
+    }
 }
 
 export async function loginUser(
@@ -29,11 +43,9 @@ export async function loginUser(
         return null;
     }
 
-    const accessToken = jwt.sign(
-        {userId: user.id},
-        env.jwt.secret,
-        { expiresIn: "1h" }
-    );
+    const accessToken = createAccessToken({
+        userId: user.id,
+    })
     
     return {
         user: {

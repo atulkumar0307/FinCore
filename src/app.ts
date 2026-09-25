@@ -1,5 +1,6 @@
 import express from "express";
 import userRouter from "./modules/user/user.routes.js";
+import { errorMiddlware } from "./middleware/error.middleware.js";
 export function createApp(){
     const app = express();
 
@@ -10,6 +11,7 @@ export function createApp(){
     })
 
     app.use("/api/v1/users", userRouter);
+    app.use(errorMiddlware);
 
     return app;
 }
