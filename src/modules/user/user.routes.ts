@@ -1,5 +1,5 @@
 import {Router} from "express";
-import { register, login, getMe } from "./user.controller.js";
+import { register, login, getMe, refresh, logout } from "./user.controller.js";
 import { authenticate } from "./user.middleware.js";
 import { registerSchema, loginSchema } from "./user.validation.js";
 import { validateBody } from "./user.validation.middleware.js";
@@ -16,5 +16,8 @@ userRouter.get("/protected", authenticate, (req, res)=>{
     });
 })
 userRouter.get("/me", authenticate, getMe);
+
+userRouter.post("/refresh", refresh);
+userRouter.post('/logout', logout);
 
 export default userRouter;

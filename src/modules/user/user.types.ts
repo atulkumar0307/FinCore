@@ -1,4 +1,4 @@
-export type User= {
+export type User = {
     id: string;
     name: string;
     email: string;
@@ -16,4 +16,5 @@ export type PublicUser = {
 export type LoginResponse = {
     user: PublicUser;
     accessToken: string;
+    refreshToken: string;
 }

@@ -3,6 +3,8 @@ import { createUser, findUserByEmail, findUserById } from "./user.repository.js"
 import { User, LoginResponse, PublicUser } from "./user.types.js";
 import { AppError } from "../../shared/errors/app.error.js";
 import { createAccessToken } from "../../shared/auth/jwt.js";
+import { issueRefreshToken } from "./refresh-token.service.js";
+
 export async function registerUser(
     name: string,
     email: string,
@@ -46,6 +48,10 @@ export async function loginUser(
     const accessToken = createAccessToken({
         userId: user.id,
     })
+
+    const refreshToken = await issueRefreshToken(
+        user.id    
+    );
     
     return {
         user: {
@@ -54,6 +60,7 @@ export async function loginUser(
             email: user.email
         },
         accessToken,
+        refreshToken,
     };
 }
 
