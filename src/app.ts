@@ -1,6 +1,8 @@
 import express from "express";
 import userRouter from "./modules/user/user.routes.js";
+import accountRouter from "./modules/account/account.routes.js";
 import { errorMiddlware } from "./middleware/error.middleware.js";
+
 export function createApp(){
     const app = express();
 
@@ -11,6 +13,7 @@ export function createApp(){
     })
 
     app.use("/api/v1/users", userRouter);
+    app.use("/api/v1/accounts", accountRouter);
     app.use(errorMiddlware);
 
     return app;
