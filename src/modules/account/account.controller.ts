@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from "express";
-import { createUserAccount } from "./account.service.js";
+import { createUserAccount, getUserAccounts, getUserAccount } from "./account.service.js";
 
 export async function createAccountController(
     req: Request,
@@ -25,6 +25,64 @@ export async function createAccountController(
             account,
         });
     } catch(error){
+        next(error);
+    }
+}
+
+export async function getAccountsController(
+    req: Request,
+    res: Response,
+    next: NextFunction
+): Promise<void> {
+    try{
+        if(!req.user){
+            res.status(401).json({
+                message: "Unauthorized",
+            });
+            return;
+        }
+
+        const accounts = await getUserAccounts(
+            req.user.userId
+        );
+
+        res.status(200).json({
+            accounts,
+        });
+    } catch (error){
+        next(error);
+    }
+}
+
+export async function getAccountController(
+    req: Request< {accountId: string}>,
+    res: Response,
+    next: NextFunction
+): Promise<void>{
+    try{
+        if(!req.user){
+            res.status(401).json({
+                message: "Unauthorized",
+            });
+            return;
+        }
+
+        const account = await getUserAccount(
+            req.params.accountId,
+            req.user.userId
+        );
+
+        if(!account){
+            res.status(404).json({
+                message: "Account not found",
+            });
+            return;
+        }
+
+        res.status(200).json({
+            account,
+        });
+    } catch (error){
         next(error);
     }
 }

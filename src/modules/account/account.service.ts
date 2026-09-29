@@ -1,4 +1,4 @@
-import { createAccount } from "./account.repository.js";
+import { createAccount, findAccountsByUserId, findAccountById } from "./account.repository.js";
 import { Account } from "./account.types.js";
 
 export async function createUserAccount(
@@ -12,4 +12,17 @@ export async function createUserAccount(
         currency
     );
     return account;
+}
+
+export async function getUserAccounts(
+    userId: string
+): Promise<Account[]> {
+    return await findAccountsByUserId(userId);
+}
+
+export async function getUserAccount(
+    accountId: string,
+    userId: string
+): Promise<Account | null> {
+    return await findAccountById(accountId, userId);
 }
