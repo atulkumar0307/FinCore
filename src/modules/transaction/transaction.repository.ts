@@ -34,3 +34,17 @@ export async function createTransaction(
 
     return result.rows[0];
 }
+
+export async function completeTransaction(
+    transactionId: string,
+    client: PoolClient
+): Promise<void> {
+    await client.query(
+        `
+        UPDATE transactions
+        SET status = 'COMPLETED'
+        WHERE id = $1
+        `,
+        [transactionId]
+    );
+}
