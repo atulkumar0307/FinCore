@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from "express";
 import { createUserAccount, getUserAccounts, getUserAccount } from "./account.service.js";
-import { depositMoney } from "./account.service.js";
+import { depositMoney, withdrawMoney } from "./account.service.js";
 
 export async function createAccountController(
     req: Request,
@@ -112,6 +112,34 @@ export async function depositController(
             transaction,
         });
     } catch (error){
+        next(error);
+    }
+}
+
+export async function withdrawController(
+    req: Request,
+    res: Response,
+    next: NextFunction
+): Promise<void> {
+    try{
+        if(!req.user) {
+            res.status(401).json({
+                message: "Unauthorized",
+            });
+            return;
+        }
+
+        const transaction = await withdrawMoney(
+            req.params.accountId as string,
+            req.user.userId,
+            req.body.amount
+        );
+        
+        res.status(201).json({
+            message: "Withdrawal successful",
+            transaction
+        });
+    } catch(error){
         next(error);
     }
 }

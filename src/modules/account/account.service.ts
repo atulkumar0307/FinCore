@@ -1,9 +1,8 @@
-import { createAccount, findAccountsByUserId, findAccountById } from "./account.repository.js";
+import { createAccount, findAccountsByUserId, findAccountById, findAccountByIdForUpdate, increaseAccountBalance, decreaseAccountBalance } from "./account.repository.js";
 import { Account } from "./account.types.js";
 import { withTransaction } from "../../config/database.js";
 import { createTransaction, completeTransaction } from "../transaction/transaction.repository.js";
 import { createLedgerEntry } from "../ledger/ledger.repository.js";
-import { findAccountByIdForUpdate, increaseAccountBalance } from "./account.repository.js";
 
 export async function createUserAccount(
     userId: string,
@@ -83,6 +82,61 @@ export async function depositMoney(
             transaction.id,
             client
         )
+
+        return transaction;
+    });
+}
+
+export async function withdrawMoney(
+    accountId: string,
+    userId: string,
+    amount: string
+){
+    return await withTransaction(async(client) => {
+        const account = await findAccountByIdForUpdate(
+            accountId,
+            userId,
+            client
+        );
+
+        if(!account){
+            throw new Error("Account not found");
+        }
+
+        if(account.status !== "ACTIVE"){
+            throw new Error("Account is not active");
+        }
+
+        if(Number(account.balance) < Number(amount)){
+            throw new Error("Insufficient balance");
+        }
+
+        const transaction = await createTransaction(
+            "WITHDRAWAL",
+            amount,
+            account.currency,
+            undefined,
+            client
+        );
+
+        await decreaseAccountBalance(
+            accountId,
+            amount,
+            client
+        );
+
+        await createLedgerEntry(
+            transaction.id,
+            accountId,
+            "DEBIT",
+            amount,
+            client
+        );
+
+        await completeTransaction(
+            transaction.id,
+            client
+        );
 
         return transaction;
     });

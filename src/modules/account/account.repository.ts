@@ -1,6 +1,6 @@
 import { pool } from "../../config/database.js";
 import { Account } from "./account.types.js";
-import { PoolClient } from "pg";
+import { Pool, PoolClient } from "pg";
 
 export async function createAccount(
     userId: string,
@@ -95,6 +95,23 @@ export async function increaseAccountBalance(
             balance = balance + $1,
             updated_at = NOW()
         WHERE id = $2        
+        `,
+        [amount, accountId]
+    );
+}
+
+export async function decreaseAccountBalance(
+    accountId: string,
+    amount: string,
+    client: PoolClient
+): Promise<void> {
+    await client.query(
+        `
+        UPDATE accounts
+        SET
+            balance = balance - $1,
+            updated_at = NOW()
+        WHERE id = $2
         `,
         [amount, accountId]
     );
