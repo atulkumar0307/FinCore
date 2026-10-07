@@ -1,8 +1,20 @@
 import { Router } from "express";
-import { createAccountController, getAccountsController, getAccountController, depositController, withdrawController } from "./account.controller.js";
+import { 
+    createAccountController, 
+    getAccountsController, 
+    getAccountController, 
+    depositController, 
+    withdrawController, 
+    transferController 
+} from "./account.controller.js";
 import { authenticate } from "../user/user.middleware.js"
 import { validateBody } from "../user/user.validation.middleware.js";
-import { createAccountSchema, depositSchema, withdrawalSchema } from "./account.validation.js";
+import { 
+    createAccountSchema,
+    depositSchema, 
+    transferSchema, 
+    withdrawalSchema 
+} from "./account.validation.js";
 
 const router = Router();
 
@@ -11,5 +23,6 @@ router.get("/", authenticate, getAccountsController);
 router.get("/:accountId", authenticate, getAccountController);
 router.post("/:accountId/deposit", authenticate, validateBody(depositSchema), depositController);
 router.post("/:accountId/withdraw", authenticate, validateBody(withdrawalSchema), withdrawController);
+router.post("/:accountId/transfer", authenticate, validateBody(transferSchema), transferController);
 
 export default router;

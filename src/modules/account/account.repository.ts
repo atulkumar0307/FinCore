@@ -22,6 +22,7 @@ export async function createAccount(
         type,
         currency,
         status,
+        balance,
         created_at AS "createdAt",
         updated_at AS "updatedAt"
         `,
@@ -42,6 +43,7 @@ export async function findAccountsByUserId(
             type,
             currency,
             status,
+            balance,
             created_at AS "createdAt",
             updated_at AS "updatedAt"
         FROM accounts
@@ -119,7 +121,7 @@ export async function decreaseAccountBalance(
 
 export async function findAccountByIdForUpdate(
     accountId: string,
-    userId: string,
+    userId: string | undefined,
     client: PoolClient
 ): Promise<Account | null> {
     const result = await client.query<Account>(
@@ -136,13 +138,11 @@ export async function findAccountByIdForUpdate(
             updated_at AS "updatedAt"
         FROM accounts
         WHERE id = $1
-            AND user_id = $2
+            AND ($2::uuid IS NULL OR user_id = $2)
         FOR UPDATE
         `,
-        [accountId, userId]
+        [accountId, userId ?? null]
     );
-    if(result.rows.length === 0){
-        return null;
-    }
-    return result.rows[0];
+
+    return result.rows[0] ?? null;
 }

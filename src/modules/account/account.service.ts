@@ -141,3 +141,106 @@ export async function withdrawMoney(
         return transaction;
     });
 }
+
+export async function tranferMoney(
+    fromAccountId: string,
+    userId: string,
+    toAccountId: string,
+    amount: string
+){
+    return await withTransaction(async (client) => {
+        // Prevent self transfer
+        if(fromAccountId === toAccountId){
+            throw new Error("Cannot transfer to the same account");
+        }
+        
+        // Always lock account in the same order
+        const accountIds = [fromAccountId, toAccountId].sort();
+
+        const firstAccount = await findAccountByIdForUpdate(
+            accountIds[0],
+            undefined,
+            client
+        );
+        const secondAccount = await findAccountByIdForUpdate(
+            accountIds[1],
+            undefined,
+            client
+        );
+
+        if(!firstAccount || !secondAccount){
+            throw new Error("Account not found");
+        }
+
+        // Recover the actual business roles after sorted locking
+        const sender = firstAccount.id === fromAccountId ? firstAccount : secondAccount;
+        const receiver = firstAccount.id === toAccountId ? firstAccount : secondAccount;
+
+        // Sender must belong to logged in user
+        if(sender.userId !== userId){
+            throw new Error("Unauthorized");
+        }
+
+        // Both account must be active
+        if(
+            sender.status !== "ACTIVE" ||
+            receiver.status !== "ACTIVE"
+        ){
+            throw new Error("Both accounts must be active");
+        }
+
+        // Sender must have enough money
+        if(Number(sender.balance) < Number(amount)){
+            throw new Error("Insufficient balance");
+        }
+
+        // Create transfer transaction
+        const transaction = await createTransaction(
+            "TRANSFER",
+            amount,
+            sender.currency,
+            undefined,
+            client
+        );
+
+        // Debit sender
+        await decreaseAccountBalance(
+            sender.id,
+            amount,
+            client
+        );
+
+        // Credit receiver
+        await increaseAccountBalance(
+            receiver.id,
+            amount,
+            client
+        );
+
+        // Sender ledger entry
+        await createLedgerEntry(
+            transaction.id,
+            sender.id,
+            "DEBIT",
+            amount,
+            client
+        );
+
+        // Receiver ledger entry
+        await createLedgerEntry(
+            transaction.id,
+            receiver.id,
+            "CREDIT",
+            amount,
+            client
+        )
+
+        // Mark transaction complete
+        await completeTransaction(
+            transaction.id,
+            client
+        );
+
+        return transaction;
+    });
+}
