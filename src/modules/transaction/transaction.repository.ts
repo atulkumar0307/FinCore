@@ -38,13 +38,22 @@ export async function createTransaction(
 export async function completeTransaction(
     transactionId: string,
     client: PoolClient
-): Promise<void> {
-    await client.query(
+): Promise<Transaction> {
+    const result = await client.query<Transaction>(
         `
         UPDATE transactions
         SET status = 'COMPLETED'
         WHERE id = $1
+        RETURNING
+            id,
+            type,
+            status,
+            amount,
+            currency,
+            reference,
+            created_at AS "createdAt"
         `,
         [transactionId]
     );
+    return result.rows[0];
 }

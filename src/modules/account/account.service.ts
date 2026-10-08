@@ -3,6 +3,8 @@ import { Account } from "./account.types.js";
 import { withTransaction } from "../../config/database.js";
 import { createTransaction, completeTransaction } from "../transaction/transaction.repository.js";
 import { createLedgerEntry } from "../ledger/ledger.repository.js";
+import { checkIdempotency } from "../idempotency/idempotency.service.js";
+import { updateIdempotencyKey } from "../idempotency/idempotency.repository.js";
 
 export async function createUserAccount(
     userId: string,
@@ -78,12 +80,12 @@ export async function depositMoney(
         );
 
         // 6. Complete transaction
-        await completeTransaction(
+        const completedTransaction = await completeTransaction(
             transaction.id,
             client
         )
 
-        return transaction;
+        return completedTransaction;
     });
 }
 
@@ -133,12 +135,12 @@ export async function withdrawMoney(
             client
         );
 
-        await completeTransaction(
+        const completedTransaction = await completeTransaction(
             transaction.id,
             client
         );
 
-        return transaction;
+        return completedTransaction;
     });
 }
 
@@ -146,9 +148,42 @@ export async function tranferMoney(
     fromAccountId: string,
     userId: string,
     toAccountId: string,
-    amount: string
+    amount: string,
+    idempotencyKey: string
 ){
     return await withTransaction(async (client) => {
+
+        const idempotency = await checkIdempotency(
+            userId,
+            idempotencyKey,
+            {
+                fromAccountId,
+                toAccountId,
+                amount,
+            },
+            client
+        );
+
+        if(idempotency.isRetry){
+            const record = idempotency.record;
+
+            if(record.status === "COMPLETED"){
+                return record.response;
+            }
+
+            if(record.status === "PROCESSING"){
+                throw new Error(
+                    "Request with this idempotency key is already being processed"
+                );
+            }
+
+            if(record.status === "FAILED"){
+                throw new Error(
+                    "Previous request with this idemptency key failed"
+                );
+            }
+        }
+        
         // Prevent self transfer
         if(fromAccountId === toAccountId){
             throw new Error("Cannot transfer to the same account");
@@ -236,11 +271,19 @@ export async function tranferMoney(
         )
 
         // Mark transaction complete
-        await completeTransaction(
+        const completedTransaction = await completeTransaction(
             transaction.id,
             client
         );
 
-        return transaction;
+        // Update idempotency key
+        await updateIdempotencyKey(
+            idempotency.record.id,
+            "COMPLETED",
+            completedTransaction,
+            client
+        );
+
+        return completedTransaction;
     });
 }

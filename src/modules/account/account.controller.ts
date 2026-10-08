@@ -162,12 +162,21 @@ export async function transferController(
             });
             return;
         }
+
+        const idempotencyKey = req.header("Idempotency-Key");
+        if(!idempotencyKey){
+            res.status(400).json({
+                message: "Idempotency-Key header is required",
+            });
+            return;
+        }
         
         const transaction = await tranferMoney(
             req.params.accountId as string,
             req.user.userId,
             req.body.toAccountId,
-            req.body.amount
+            req.body.amount,
+            idempotencyKey
         );
 
         res.status(201).json({
