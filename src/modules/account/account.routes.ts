@@ -15,6 +15,7 @@ import {
     transferSchema, 
     withdrawalSchema 
 } from "./account.validation.js";
+import { getAccountTransactionController } from "./account.controller.js";
 
 const router = Router();
 
@@ -24,5 +25,6 @@ router.get("/:accountId", authenticate, getAccountController);
 router.post("/:accountId/deposit", authenticate, validateBody(depositSchema), depositController);
 router.post("/:accountId/withdraw", authenticate, validateBody(withdrawalSchema), withdrawController);
 router.post("/:accountId/transfer", authenticate, validateBody(transferSchema), transferController);
+router.get("/:accountId/transactions", authenticate, getAccountTransactionController);
 
 export default router;

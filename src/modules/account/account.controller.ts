@@ -7,6 +7,7 @@ import {
     depositMoney, 
     withdrawMoney 
 } from "./account.service.js";
+import { getAccountTransactionHistory } from "../transaction/transaction.service.js";
 
 export async function createAccountController(
     req: Request,
@@ -183,6 +184,42 @@ export async function transferController(
             message: "Transfer successful",
             transaction,
         });
+    } catch (error){
+        next(error);
+    }
+}
+
+export async function getAccountTransactionController(
+    req: Request,
+    res: Response,
+    next: NextFunction
+): Promise<void>{
+    try{
+        if(!req.user){
+            res.status(401).json({
+                message: "Unauthorized",
+            });
+            return;
+        }
+
+        const limit = Math.min(
+            Math.max(Number(req.query.limit) || 10, 1),
+            100
+        );
+
+        const offset = Math.max(
+            Number(req.query.offset) || 0,
+            0
+        );
+
+        const result = await getAccountTransactionHistory(
+            req.params.accountId as string,
+            req.user.userId,
+            limit,
+            offset
+        );
+
+        res.status(200).json(result);
     } catch (error){
         next(error);
     }
