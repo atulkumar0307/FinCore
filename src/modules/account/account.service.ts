@@ -5,6 +5,7 @@ import { createTransaction, completeTransaction } from "../transaction/transacti
 import { createLedgerEntry } from "../ledger/ledger.repository.js";
 import { checkIdempotency } from "../idempotency/idempotency.service.js";
 import { updateIdempotencyKey } from "../idempotency/idempotency.repository.js";
+import { AppError } from "../../shared/errors/app.error.js";
 
 export async function createUserAccount(
     userId: string,
@@ -46,12 +47,12 @@ export async function depositMoney(
             client
         );
         if(!account){
-            throw new Error("Account not found");
+            throw new AppError(404, "Account not found");
         }
 
         // 2. Check account status
         if(account.status !== "ACTIVE"){
-            throw new Error("Account is not active");
+            throw new AppError(409, "Account is not active");
         }
 
         // 3. Create financial transaction
@@ -102,15 +103,15 @@ export async function withdrawMoney(
         );
 
         if(!account){
-            throw new Error("Account not found");
+            throw new AppError(404, "Account not found");
         }
 
         if(account.status !== "ACTIVE"){
-            throw new Error("Account is not active");
+            throw new AppError(409, "Account is not active");
         }
 
         if(Number(account.balance) < Number(amount)){
-            throw new Error("Insufficient balance");
+            throw new AppError(409, "Insufficient balance");
         }
 
         const transaction = await createTransaction(
@@ -172,23 +173,25 @@ export async function tranferMoney(
             }
 
             if(record.status === "PROCESSING"){
-                throw new Error(
+                throw new AppError(
+                    409,
                     "Request with this idempotency key is already being processed"
                 );
             }
 
             if(record.status === "FAILED"){
-                throw new Error(
-                    "Previous request with this idemptency key failed"
+                throw new AppError(
+                    409,
+                    "Previous request with this idempotency key failed"
                 );
             }
         }
-        
+
         // Prevent self transfer
         if(fromAccountId === toAccountId){
-            throw new Error("Cannot transfer to the same account");
+            throw new AppError(400, "Cannot transfer to the same account");
         }
-        
+
         // Always lock account in the same order
         const accountIds = [fromAccountId, toAccountId].sort();
 
@@ -204,7 +207,7 @@ export async function tranferMoney(
         );
 
         if(!firstAccount || !secondAccount){
-            throw new Error("Account not found");
+            throw new AppError(404, "Account not found");
         }
 
         // Recover the actual business roles after sorted locking
@@ -213,7 +216,7 @@ export async function tranferMoney(
 
         // Sender must belong to logged in user
         if(sender.userId !== userId){
-            throw new Error("Unauthorized");
+            throw new AppError(404, "Account not found");
         }
 
         // Both account must be active
@@ -221,12 +224,17 @@ export async function tranferMoney(
             sender.status !== "ACTIVE" ||
             receiver.status !== "ACTIVE"
         ){
-            throw new Error("Both accounts must be active");
+            throw new AppError(409, "Both accounts must be active");
+        }
+
+        // Verify currency compatibility
+        if(sender.currency !== receiver.currency){
+            throw new AppError(409, "Account currencies do not match");
         }
 
         // Sender must have enough money
         if(Number(sender.balance) < Number(amount)){
-            throw new Error("Insufficient balance");
+            throw new AppError(409, "Insufficient balance");
         }
 
         // Create transfer transaction
