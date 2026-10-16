@@ -1,13 +1,17 @@
 import { pool } from "../../config/database.js";
 import { Account } from "./account.types.js";
 import { Pool, PoolClient } from "pg";
+import { AppError } from "../../shared/errors/app.error.js";
 
 export async function createAccount(
     userId: string,
     type: Account["type"],
-    currency: string
+    currency: string,
+    client?: PoolClient
 ): Promise<Account>{
-    const result = await pool.query<Account>(
+    const db = client ?? pool;
+
+    const result = await db.query<Account>(
         `
         INSERT INTO accounts (
         user_id,
@@ -107,16 +111,24 @@ export async function decreaseAccountBalance(
     amount: string,
     client: PoolClient
 ): Promise<void> {
-    await client.query(
+    const result = await client.query(
         `
         UPDATE accounts
         SET
-            balance = balance - $1,
+            balance = balance - $1::numeric,
             updated_at = NOW()
         WHERE id = $2
+        AND balance >= $1::numeric
+        RETURNING id
         `,
         [amount, accountId]
     );
+    if(result.rowCount !== 1){
+        throw new AppError(
+            409,
+            "Insufficient balance or account not found"
+        );
+    }
 }
 
 export async function findAccountByIdForUpdate(
