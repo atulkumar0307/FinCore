@@ -8,9 +8,10 @@ import {
     transferController 
 } from "./account.controller.js";
 import { authenticate } from "../user/user.middleware.js"
-import { validateBody } from "../user/user.validation.middleware.js";
+import { validateBody, validateParams } from "../user/user.validation.middleware.js";
 import { 
     createAccountSchema,
+    accountIdSchema,
     depositSchema, 
     transferSchema, 
     withdrawalSchema 
@@ -21,10 +22,10 @@ const router = Router();
 
 router.post("/", authenticate, validateBody(createAccountSchema), createAccountController);
 router.get("/", authenticate, getAccountsController);
-router.get("/:accountId", authenticate, getAccountController);
-router.post("/:accountId/deposit", authenticate, validateBody(depositSchema), depositController);
-router.post("/:accountId/withdraw", authenticate, validateBody(withdrawalSchema), withdrawController);
-router.post("/:accountId/transfer", authenticate, validateBody(transferSchema), transferController);
-router.get("/:accountId/transactions", authenticate, getAccountTransactionController);
+router.get("/:accountId", authenticate, validateParams(accountIdSchema), getAccountController);
+router.post("/:accountId/deposit", authenticate, validateParams(accountIdSchema), validateBody(depositSchema), depositController);
+router.post("/:accountId/withdraw", authenticate, validateParams(accountIdSchema), validateBody(withdrawalSchema), withdrawController);
+router.post("/:accountId/transfer", authenticate, validateParams(accountIdSchema), validateBody(transferSchema), transferController);
+router.get("/:accountId/transactions", authenticate, validateParams(accountIdSchema),  getAccountTransactionController);
 
 export default router;
