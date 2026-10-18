@@ -57,8 +57,9 @@ export async function checkIdempotency(
             );
         }
 
-        if(cocurrent.requestHash !== requestHash){
-            throw new Error(
+        if (cocurrent.requestHash !== requestHash) {
+            throw new AppError(
+                409,
                 "Idempotency key already used for a different request"
             );
         }
